@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>PDF 預覽與下載</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <h2>預覽 + 下載 PDF（含假資料）</h2>
+  <button id="downloadBtn">下載 PDF</button>
+  <button id="printEmptyBtn">列印空白表格 PDF</button>
+  <button id="printXYZBtn">測試座標克度</button>
+  <hr />
+  <iframe id="pdfPreview" width="100%" height="600px" style="border:1px solid #ccc;"></iframe>
+
+  <script type="module">
+    import { monkData } from './monkData.js';
+    import {drawA4Grid} from './drawTableLine.js'
+    import { mappingToPdfText, addTextToPDF } from './invoicePdfMapper.js'
+    const { jsPDF } = window.jspdf;
+    let currentDoc = null;
+
+    function previewAndDownloadPDF(data) {
+      const img = new Image();
+      const pdfDoc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+      // img.src = 'invoiceTemplate.jpg';
+      img.onload = async () => {
+        try {
+          pdfDoc.addImage(img, 'JPEG', 0, 0, 210, 297);
+          pdfDoc.addFont('./eduSong_Unicode.ttf', 'eduSong_Unicode', 'normal');
+          pdfDoc.setFont('eduSong_Unicode', 'normal');
+          const pdfText = mappingToPdfText(data);
+          addTextToPDF(pdfDoc, pdfText);
+
+          // ✅ 建立 Blob 並預覽
+          const blob = pdfDoc.output('blob');
+          const pdfUrl = URL.createObjectURL(blob);
+          document.getElementById('pdfPreview').src = pdfUrl;
+
+          // ✅ 若要也自動下載，可加：
+          // pdfDoc.save("fileName.pdf");
+        } catch (err) {
+          console.error('PDF 產生錯誤:', err);
+        }
+      };
+
+      img.onerror = (event) => {
+        console.error('圖片載入失敗:', event);
+      };
+    }
+
+  function DownloadEmptyPDF() {
+    const pdfDoc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+    // ★ 你可以在這裡換參數（如 majorStep: 8 改 8 mm 主格）
+    drawA4Grid(pdfDoc, {
+      margin: 10,
+      majorStep: 10,
+      minorStep: 5
+    });
+
+    // 即時預覽
+    const blob = pdfDoc.output('blob');
+    document.getElementById('pdfPreview').src = URL.createObjectURL(blob);
+
+    // 同時儲存
+    pdfDoc.save('A4_grid.pdf');
+  }
+  
+    function DownloadXYZPDF() {
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+    drawA4Grid(doc);              // ← 先畫格紙
+
+    // 1️⃣ 畫紅色十字在中央
+      doc.setDrawColor(200, 0, 0);  // RGB
+      doc.setLineWidth(0.4);
+      doc.line(  0 +10, 158.5, 210-10, 158.5); // 橫
+      doc.line(105, 10, 105, 297-10);          // 直
+
+    // 2️⃣ 畫一個 4×8 的表格 (起點在格 (1,3))
+      const startX = 10 + 1*10;   // 20 mm
+      const startY = 10 + 3*10;   // 40 mm
+
+    // 3️⃣ 在 (col=6,row=5) 放字
+      doc.setFontSize(12);
+      doc.text('Hello', 10 + 6*10 , 10 + 5*10);
+      // 即時預覽
+      const blob = doc.output('blob');
+      document.getElementById('pdfPreview').src = URL.createObjectURL(blob);
+
+      // 同時儲存
+      // pdfDoc.save('A4_grid.pdf');
+    }
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+      console.log('下載 PDF 按鈕被點擊');
+      previewAndDownloadPDF(monkData);
+    });
+
+  document.getElementById('printEmptyBtn').addEventListener('click', () => {
+    console.log('列印空白表格 PDF 按鈕被點擊');
+    DownloadEmptyPDF();
+  });
+  document.getElementById('printXYZBtn').addEventListener('click', () => {
+    console.log('列印空白表格 PDF 按鈕被點擊');
+    DownloadXYZPDF();
+  });
+    
+  </script>
+</body>
+</html>
